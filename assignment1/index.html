@@ -1,0 +1,110 @@
+<html ng-app>
+    <head>
+        <script src="jquery.min.js"></script>
+        <script src="angular.min.js"></script>
+        <script src="leap.js"></script>
+        <style>
+        .canvas-holder,
+        .control-holder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .control-holder {
+            z-index: 2;
+            width: 800px;
+            height: 100px;
+        }
+        .button-holder {
+            width: 800px;
+            overflow: auto;
+        }
+        .button-holder button {
+            width: 300px;
+            height: 200px;
+            background: #55a;
+            color: #fff;
+            font-size: 25;
+            font-weight: bold;
+            margin: 30px;
+        }
+        </style>
+    </head>
+
+    <body>
+        <h1 style="margin-top: 100px">Assignment 1</h1>
+
+        <div class="canvas-holder">
+            <canvas width=800 height=600></canvas>
+        </div>
+
+        <div class="button-holder">
+            <button>Red</button>
+            <button>Blue</button>
+            <button>Green</button>
+            <button>Yellow</button>
+        </div>
+        <div class="control-holder" ng-controller="PuppetMaster">
+            <input type="text" ng-model="point.x"></input>
+            <input type="text" ng-model="point.y"></input>
+            <button ng-click="Fire()">Click</button>
+        </div>
+    </body>
+
+    <script>
+    $(".button-holder button").click(function() {
+        var text = $(this).text();
+        $("h1").text(text);
+    });
+    var canvas = $('canvas')[0];
+    var c = canvas.getContext('2d');
+
+    function moveCircle(p) {
+        c.clearRect(0, 0, 800, 600);
+        c.beginPath()
+        c.arc(p.x, p.y, 50, 0, Math.PI*2);
+        c.closePath()
+        c.fill();
+    }
+    function lookFor(x,y) {
+        var b;
+        x = parseInt(x);
+        y = parseInt(y);
+        $(".button-holder button").each(function() {
+            var offset = $(this).offset();
+            var w = $(this).width(), h = $(this).height();
+            console.debug(offset, w, h, x, y)
+            if(offset.left <= x && x <= offset.left + w)
+                if(offset.top <= y && y <= offset.top + h) {
+                    console.debug("FOUND");
+                    b = $(this);
+                    return false;
+                }
+            console.debug("NOT Good")
+        });
+        return b;
+    }
+
+    function PuppetMaster($scope) {
+            $scope.point = {
+                x: 0,
+                y: 0
+            };
+            $scope.$watch("point", function(newValue, oldValue) {
+                moveCircle($scope.point);
+            }, true);
+
+            // Find the right button, and triggers it's clicking
+            $scope.Fire = function() {
+                var x = $scope.point.x,
+                    y = $scope.point.y;
+                var button = lookFor(x,y);
+                if(button) button.trigger('click');
+                else {
+                    $("h1").text("Nothing found")
+                }
+            }
+    }
+    </script>
+</html>
