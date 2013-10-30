@@ -1,0 +1,86 @@
+<html>
+    <head>
+    <script src="jquery.min.js"></script>
+    <script src="angular.min.js"></script>
+    <script src="d3.v3.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.css">
+    </head>
+    <body>
+        <script>
+        var w = 800, h = 600;
+        var svg = d3.select('body').append('svg').attr('width', w).attr('height', h);
+
+        var data = [],
+            links = [];
+
+        for(var i=0; i < 100; i++) {
+            data.push({
+                size: Math.random() * 10,
+                x: Math.random() * w,
+                y: Math.random() * h
+            });
+        }
+
+        for(var n=0; n < 100; n++) {
+            var i = Math.floor(Math.random() * data.length),
+                j = Math.floor(Math.random() * data.length);
+
+            links.push({
+                source: data[i],
+                target: data[j]
+            })
+        }
+
+        function dist(link) {
+            return 30;
+        }
+
+        var force = d3.layout.force()
+            .size([w, h])
+            .nodes(data)
+            .links(links)
+            .distance(dist)
+            .on('tick', updateXY);
+
+        var circles = svg.selectAll('.node');
+
+        circles = circles.data(data)
+        .enter()
+            .append('circle')
+            .attr('class', 'node')
+            .attr('cx', function(d) { return d.x; })
+            .attr('cy', function(d) { return d.y; })
+            .attr('r', function(d) { return d.size; })
+            .attr('fill', 'RGBA(255,200, 100, 0.5)')
+            .call(force.drag)
+            ;
+
+        edges = svg.selectAll('line')
+            .data(links)
+            .enter()
+                .append('line')
+                .attr('x1', function(l) {return l.source.x})
+                .attr('y1', function(l) {return l.source.y})
+                .attr('x2', function(l) {return l.target.x})
+                .attr('y2', function(l) {return l.target.y})
+                .attr('stroke', 'rgba(100,100,50,0.5)')
+            ;
+        function updateXY() {
+            console.debug("updating...")
+            circles
+            .attr('cx', function(d) { return d.x; })
+            .attr('cy', function(d) { return d.y; });
+
+            edges
+                .attr('x1', function(l) {return l.source.x})
+                .attr('y1', function(l) {return l.source.y})
+                .attr('x2', function(l) {return l.target.x})
+                .attr('y2', function(l) {return l.target.y})
+            ;
+        }
+
+        force.start();
+
+        </script>
+    </body>
+</html>

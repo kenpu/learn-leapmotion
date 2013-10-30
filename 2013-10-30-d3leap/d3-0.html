@@ -1,0 +1,30 @@
+<html>
+    <head>
+    <script src="jquery.min.js"></script>
+    <script src="angular.min.js"></script>
+    <script src="d3.v3.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.css">
+    </head>
+    <body>
+        <script>
+        var w = 800, h = 600;
+        var svg = d3.select('body').append('svg').attr('width', w).attr('height', h);
+
+        var data = [{
+            x: 100,
+            y: 100
+        }];
+        var circles = svg.selectAll('.node');
+
+        circles = circles.data(data)
+        .enter()
+            .append('circle')
+            .attr('class', 'node')
+            .attr('cx', function(d) { return d.x; })
+            .attr('cy', function(d) { return d.y; })
+            .attr('r', function(d) { return 100; })
+            .attr('fill', 'RGBA(255,200, 100, 0.5)')
+            ;
+        </script>
+    </body>
+</html>
