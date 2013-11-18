@@ -1,0 +1,38 @@
+<html>
+
+<head lang="en">
+    <script src="jquery.min.js"></script>
+    <script src="angular.min.js"></script>
+    <script src="worker.js"></script>
+  </head>
+  
+  <body ng-app="task" ng-controller='MainController'>
+    <span ng-repeat="instructor in instructors">
+      <input type='checkbox' value="{{instructor}}" check-list='selected_instructors'> {{instructor}}
+    </span>
+	<br/>
+	<span ng-repeat="course in courses">
+      <input type='checkbox' value="{{course}}" check-list='selected_courses'> {{course}}
+    </span>
+	<br/>
+	<span ng-repeat="room in rooms">
+      <input type='checkbox' value="{{room}}" check-list='selected_rooms'> {{room}}
+    </span>
+	<br/>
+	<br/>
+	
+	<ul>
+	<li ng-repeat="instructor in selected_instructors">{{instructor}}</li>
+	<li ng-hide="selected_instructors.length">No instructors selected</li>
+	<li ng-repeat="course in selected_courses">{{course}}</li>
+	<li ng-hide="selected_courses.length">No courses selected</li>
+	<li ng-repeat="room in selected_rooms">{{room}}</li>
+	<li ng-hide="selected_rooms.length">No rooms selected</li>
+	</ul>
+	
+	<br/>
+	
+	<br/>
+  </body>
+
+</html>
