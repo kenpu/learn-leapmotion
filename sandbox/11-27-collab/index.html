@@ -1,0 +1,19 @@
+<html>
+
+<head lang="en">
+    <script src="jquery.min.js"></script>
+    <script src="angular.min.js"></script>
+	<script src="d3.v3.min.js"></script>
+    <script src="app.js"></script>
+  </head>
+  
+  <body ng-app="layoutlist" ng-controller='MainController'>
+  	<d3checkbox width=800 height=600 objects=objects labeler="labeler" save="selected"></d3checkbox>
+  	<ul>
+  		<li ng-repeat="(name, val) in selected">
+  			{{name}}
+  		</li>
+  	</ul>
+  </body>
+
+</html>
