@@ -65,7 +65,7 @@
         var force = d3.layout.force()
             .size([W, H])
             .charge(function(d) {
-                return (d.fixed) ? -1000 : -15 
+                return (d.fixed) ? -2000 : -15 
             })
             .friction(0.9)
             .nodes(data)

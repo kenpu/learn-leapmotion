@@ -1,0 +1,25 @@
+<html ng-app="twocursor">
+
+  <head lang="en">
+  <script src="../jquery.min.js"></script>
+  <script src="../angular.min.js"></script>
+	<script src="../leap.js"></script>
+  <script src="app.js"></script>
+  <link rel="stylesheet" href="style.css">
+  </head>
+  
+  <body ng-controller="twocursorCtrl">
+    <h1>Palm</h1>
+    <ul>
+      <li>{{pointers.p1 | angles}}, {{pointers.p2 | angles}}</li>
+      <li>{{X1()}}, {{Y1()}}
+    </ul>
+
+    <div class="overlay">
+      <svg width=800 height=600>
+        <circle id="c1" cx=100 cy=100 r=30 fill="#ffa" opacity=0></circle>
+        <circle id="c2" cx=100 cy=100 r=10 fill="#faa" opacity=0></circle>
+      </svg>
+    </div>
+  </body>
+</html>
