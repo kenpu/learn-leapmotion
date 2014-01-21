@@ -1,0 +1,59 @@
+<!doctype html>
+
+<html ng-app="leapapp">
+    <head>
+    <script src="jquery.min.js"></script>
+    <script src="angular.min.js"></script>
+    <script src="sprintf.js"></script>
+    <script src="d3.v3.min.js"></script>
+    <script src="leap.js"></script>
+    <script src="uinput.js"></script>
+    <link rel="stylesheet" href="style.css">
+    </head>
+
+    <body ng-controller="leapctrl"> 
+
+        <h1>Leap stream processing</h1>
+
+        <pre>Hand: {{hand[0]|angle}} {{hand[1]|angle}} {{hand[2]|angle}}</pre>
+        <div overlay="">
+            <svg>
+                <circle cx="100" cy="200" r="30"/>
+            </svg>
+        </div>
+
+    <script>
+        var app = angular.module('leapapp', []);
+        var leap = new LeapStream();
+        var handFilter = new HandFilter();
+        leap.connect(handFilter);
+
+        app.controller('leapctrl', function($scope) {
+            $scope.data = {};
+            var sink = new NgScope($scope, "hand");
+            handFilter.connect(sink);
+        });
+
+        app.directive('overlay', function() {
+            return function($scope, element, attrs) {
+                var svg = d3.select(element[0]).select('svg');
+                var width = element.width();
+                var height = element.height();
+
+                $scope.data.size = {
+                    width: width,
+                    height: height
+                }
+                svg.attr('width', width).attr('height', height);
+            }
+        });
+
+        app.filter('angle', function() {
+            return function(input) {
+                if(input == null) return "--.--";
+                return sprintf("%2.2f", input);
+            }
+        });
+    </script>
+    </body>
+</html>
