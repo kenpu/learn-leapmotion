@@ -3,41 +3,35 @@
  */
 
 
-/* ==== RelativeVector ===== */
-
-function RelVector(width, height, x0, y0) {
-    this.width = width,
-    this.height = height,
-    this.x0 = x0,
-    this.y0 = y0;
-    this.reset()
-}
-RelVector.prototype.reset = function() {
-    this.x = this.x0,
-    this.y = this.y0;
-}
-RelVector.prototype.move = function(dx, dy) {
-    this.x += dx;
-    this.y += dy;
-}
-RelVector.prototype.jump = function(x, y) {
-    this.x = x;
-    this.y = y;
-}
-
 /* ===== Streamers ========= */
 
-function HandFilter(anotherFilter) {
+function _yield(streamer, data) {
+    if(streamer.downstream && streamer.downstream.length > 0) {
+        streamer.downstream.forEach(function(d) {
+            d.consume(data);
+        });
+    }
+}
+
+function _connect(upstream, downstream) {
+    if(upstream.downstream == null) {
+        upstream.downstream = [];
+    }
+    upstream.downstream.push(downstream);
+}
+function Connect() {
+    for(var i=1; i < arguments.length; i++) {
+        _connect(arguments[i-1], arguments[i]);
+    }
+}
+
+function HandFilter() {
     this.restPalm = null;
     this.state = 'CLOSED';
-    this.anotherFilter = anotherFilter;
-}
-HandFilter.prototype.connect = function(f) {
-    this.anotherFilter = f;
 }
 HandFilter.prototype.consume = function(x) {
     console.debug("handFilter:", this.state);
-    if(x.hand && x.hand.fingers.length == 5) {
+    if(x.hand && x.hand.fingers.length >= 2) {
         // transition
         if(this.state == 'CLOSED') {
             this.restPalm = x.palm.slice();
@@ -47,33 +41,51 @@ HandFilter.prototype.consume = function(x) {
         var y = [x.palm[0] - this.restPalm[0],
                  x.palm[1] - this.restPalm[1],
                  x.palm[2] - this.restPalm[2]];
-        if(this.anotherFilter) this.anotherFilter.consume(y);
+        _yield(this, y);
     } else {
         // transition
         if(this.state == 'OPEN') {
             this.restPalm = null;
-            this.anotherFilter && this.anotherFilter.consume(null);
+            _yield(this, null);
         }
         this.state = 'CLOSED';
     }
 }
 
+function ScalingAngles() {
+}
+ScalingAngles.prototype.consume = function(ang) {
+    if(ang == null) 
+        _yield(this, null)
+    else {
+        var x = [0, 0, 0];
+        x[0] = Math.min(Math.max(ang[0], -0.5), 0.5);
+        x[1] = Math.min(Math.max(ang[1], -0.5), 0.5);
+        x[2] = Math.min(Math.max(ang[2], -0.5), 0.5);
+        _yield(this, x);
+    }
+}
+
 function Mover(width, height, sensitivity) {
-    this xy = new RelVector(width, height, width/2, height/2);
-    this.sensivitity = sensitivity;
+    this.x = width / 2;
+    this.y = height /2;
+    this.width = width,
+    this.height = height;
+    this.sensitivity = sensitivity;
 }
 Mover.prototype.consume = function(da) {
-    if(da == null)
-        xy.reset();
-    else {
+    if(da == null) {
+        ;
+    } else {
         var dx = da[0] * this.sensitivity;
         var dy = da[2] * this.sensitivity;
-        xy.move(dx, dy);
+        this.x += dx;
+        this.y += dy;
+        this.x = Math.min(Math.max(this.x, 0), this.width);
+        this.y = Math.min(Math.max(this.y, 0), this.height);
     }
-    return {
-        x: xy.x,
-        y: xy.y
-    }
+    var xy = { x: this.x, y: this.y };
+    _yield(this, xy);
 }
 
 
@@ -84,6 +96,7 @@ function NgScope($scope, key) {
     this.key = key;
 }
 NgScope.prototype.consume = function(x) {
+    console.debug("ngscope", this.key, x);
     var self = this;
     self.$scope.$apply(function() {
         self.$scope[self.key] = x;
@@ -95,7 +108,7 @@ NgScope.prototype.consume = function(x) {
 function LeapStream() {
     var leapLoop = new Leap.Controller({enableGesture: false});
     var self = this;
-    self.callbacks = [];
+    self.downstream = [];
 
     leapLoop.loop(function(frame) {
         var hand = null,
@@ -119,13 +132,8 @@ function LeapStream() {
             pointer: pointer
         }
 
-        self.callbacks.forEach(function(f) {
+        self.downstream.forEach(function(f) {
             f.consume(x);
         });
     });
 }
-LeapStream.prototype.connect = function(f) {
-    this.callbacks.push(f);
-}
-
-

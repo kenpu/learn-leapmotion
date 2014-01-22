@@ -15,10 +15,10 @@
 
         <h1>Leap stream processing</h1>
 
-        <pre>Hand: {{hand[0]|angle}} {{hand[1]|angle}} {{hand[2]|angle}}</pre>
+        <pre>Hand: {{hand}}
         <div overlay="">
             <svg>
-                <circle cx="100" cy="200" r="30"/>
+                <circle ng-attr-cx="{{hand.x}}" ng-attr-cy="{{hand.y}}" r="30"/>
             </svg>
         </div>
 
@@ -26,12 +26,14 @@
         var app = angular.module('leapapp', []);
         var leap = new LeapStream();
         var handFilter = new HandFilter();
-        leap.connect(handFilter);
+        var scaling = new ScalingAngles();
+        var mover = new Mover(800, 600, 10);
+        Connect(leap, handFilter, scaling, mover);
 
         app.controller('leapctrl', function($scope) {
             $scope.data = {};
             var sink = new NgScope($scope, "hand");
-            handFilter.connect(sink);
+            Connect(mover, sink);
         });
 
         app.directive('overlay', function() {
@@ -40,7 +42,7 @@
                 var width = element.width();
                 var height = element.height();
 
-                $scope.data.size = {
+                $scope.size = {
                     width: width,
                     height: height
                 }

@@ -14,7 +14,7 @@
         var data = [],
             links = [],
             MAX_SIZE = 20,
-            NUM_BALLS = 500;
+            NUM_BALLS = 100;
 
         for(var i=0; i < NUM_BALLS; i++) {
             data.push({
@@ -37,7 +37,7 @@
         var force = d3.layout.force()
             .size([w, h])
             .charge(-15)
-            .friction(0.9)
+            .friction(0.99999)
             .nodes(data)
             .links(links)
             .on('tick', updateXY);
