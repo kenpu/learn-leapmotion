@@ -111,29 +111,147 @@ function LeapStream() {
     self.downstream = [];
 
     leapLoop.loop(function(frame) {
-        var hand = null,
-            finger = null,
-            palm,
-            pointer;
-        
-        if(frame.hands.length > 0) {
-            hand = frame.hands[0];
-            palm = hand.palmNormal;
-            if(hand.fingers.length > 0) {
-                finger = hand.fingers[0];
-                pointer = finger.direction;
-            }
-        }
-
-        var x = {
-            hand: hand,
-            finger: finger,
-            palm: palm,
-            pointer: pointer
-        }
-
         self.downstream.forEach(function(f) {
-            f.consume(x);
+            f.consume(frame);
         });
     });
+}
+
+/* ======= Jan 27: Dominant hand filter ========== */
+
+/**
+ * Identify dominant hand
+ * Input:
+ *      Leapstream
+ * Output:
+ *      Stream<Hand>
+ */
+function DomhandFilter(freqThreshold) {
+    this.counter = {};
+    this.c0 = freqThreshold;
+    this.domHandId = null;
+    this.domHandFreq = 0;
+    this.stablized = false;
+}
+DomhandFilter.prototype.updateCounter = function(hand) {
+    var id = hand.id;
+    if(this.counter[id] == null) {
+        this.counter[id] = 1;
+    } else {
+        this.counter[id] += 1;
+    }
+    if(this.counter[id] > this.domHandFreq) {
+        this.domHandId = id;
+        this.domHandFreq = this.counter[id];
+    }
+}
+DomhandFilter.prototype.reset = function() {
+    this.counter = {};
+    this.stablized = false;
+    this.domHandId = null;
+    this.domHandFreq = 0;
+}
+
+DomhandFilter.prototype.consume = function(frame) {
+    var self = this;
+
+    if(frame.hands.length == 0) {
+        self.reset();
+        _yield(self, null);
+        return
+    }
+
+    // identify the dominant hand
+    if(! self.stablized) {
+        frame.hands.forEach(function(hand) {
+            self.updateCounter(hand);
+        });
+
+        if(self.domHandFreq > self.c0) {
+            self.stablized = true;
+        }
+        
+        _yield(self, null);
+    } else {
+        var domHand;
+        frame.hands.forEach(function(hand) {
+            if(hand.id == self.domHandId) {
+                domHand = hand;
+                return false;
+            }
+        });
+        if(domHand) {
+            _yield(self, domHand);
+        } else {
+            self.reset();
+            _yield(self, null);
+        }
+    }
+}
+
+/**
+ * DebugHand
+ */
+function DebugFilter(element) {
+    this.element = $(element);
+}
+DebugFilter.prototype.consume = function(hand) {
+    var angles, pos;
+    if(hand == null) {
+        angles = [0, 0, 0];
+        pos = [0, 0, 0];
+    } else {
+        angles = hand.palmNormal.slice();
+        pos    = hand.stabilizedPalmPosition.slice();
+    }
+    if(this.element) {
+        var element = this.element;
+        element.find(".angle-x").text(sprintf("%2.2f", angles[0]));
+        element.find(".angle-y").text(sprintf("%2.2f", angles[1]));
+        element.find(".angle-z").text(sprintf("%2.2f", angles[2]));
+
+        element.find(".position-x").text(sprintf("%2.2f", pos[0]));
+        element.find(".position-y").text(sprintf("%2.2f", pos[1]));
+        element.find(".position-z").text(sprintf("%2.2f", pos[2]));
+    }
+
+    _yield(this, hand);
+}
+
+
+
+/**
+ * Normalize
+ * Input:
+ *      Stream<Hand>
+ * Output:
+ *      Stream<palm: AngleVec, pos: PositionVec>
+ */
+function Normalize() {
+}
+Normalize.prototype.normalize = function(x, xmin, xmax, ymin, ymax) {
+    x = Math.min(x, xmax);
+    x = Math.max(x, xmin);
+    var y = ymin + (x - xmin)/(xmax-xmin) * (ymax - ymin);
+    return y;
+}
+Normalize.prototype.consume = function(hand) {
+    if(hand) {
+        var a0 = hand.palmNormal[0];
+        var a1 = hand.palmNormal[1];
+        var a2 = hand.palmNormal[2];
+        a0 = this.normalize(a0, -1, 1, 0, 1.0);
+        a1 = this.normalize(a1, -1, 1, 0, 1.0);
+        a2 = this.normalize(a2, -0.7, 0.7, 0, 1.0);
+        hand.palmNormal = [a0, a1, a2];
+
+        var p0 = hand.stabilizedPalmPosition[0];
+        var p1 = hand.stabilizedPalmPosition[1];
+        var p2 = hand.stabilizedPalmPosition[2];
+        p0 = this.normalize(p0, -150, 150, 0, 1.0);
+        p1 = this.normalize(p1, 50, 300, 1.0, 0);
+        p2 = this.normalize(p2, -150, 150, 0, 1.0);
+        hand.stabilizedPalmPosition = [p0, p1, p2];
+    }
+    _yield(this, hand);
 }

@@ -9,31 +9,86 @@
     <script src="leap.js"></script>
     <script src="uinput.js"></script>
     <link rel="stylesheet" href="style.css">
+    <style>
+        #debug td { width: 100px; text-align: right;}
+        .panel {
+            float: left;
+            border: thin solid black;
+            width: 400px;
+            height: 400px;
+        }
+    </style>
     </head>
 
     <body ng-controller="leapctrl"> 
 
         <h1>Leap stream processing</h1>
 
-        <pre>Hand: {{hand}}
-        <div overlay="">
-            <svg>
-                <circle ng-attr-cx="{{hand.x}}" ng-attr-cy="{{hand.y}}" r="30"/>
-            </svg>
+        <table id="debug">
+            <tr>
+                <th></th>
+                <th>X</th>
+                <th>Y</th>
+                <th>Z</th>
+            </tr>
+            <tr>
+                <th>Angles</th>
+                <td><span class="angle-x"></span></td>
+                <td><span class="angle-y"></span></td>
+                <td><span class="angle-z"></span></td>
+            </tr>
+            <tr>
+                <th>Position</th>
+                <td><span class="position-x"></span></td>
+                <td><span class="position-y"></span></td>
+                <td><span class="position-z"></span></td>
+            </tr>
+        </table>
+
+        <div class="panel">
+        <svg width="400" height="400">
+            <circle ng-attr-cx="{{data.palmNormal[0]*400}}"
+                    ng-attr-cy="{{data.palmNormal[2]*400}}" 
+                    r="30"></circle>
+        </svg>
+        </div>
+        
+        <div class="panel">
+        <svg width="400" height="400">
+            <circle ng-attr-cx="{{data.palmPosition[0]*400}}"
+                    ng-attr-cy="{{data.palmPosition[1]*400}}" 
+                    r="30"></circle>
+        </svg>
         </div>
 
     <script>
         var app = angular.module('leapapp', []);
         var leap = new LeapStream();
-        var handFilter = new HandFilter();
-        var scaling = new ScalingAngles();
-        var mover = new Mover(800, 600, 10);
-        Connect(leap, handFilter, scaling, mover);
+        var handFilter = new DomhandFilter(10);
+        var normFilter = new Normalize();
+        var debugFilter = new DebugFilter("#debug");
+        Connect(leap, handFilter, normFilter, debugFilter);
 
         app.controller('leapctrl', function($scope) {
-            $scope.data = {};
-            var sink = new NgScope($scope, "hand");
-            Connect(mover, sink);
+            $scope.data = {
+                palmNormal: null,
+                palmPosition: null
+            };
+
+            var updater = {
+                consume: function(hand) {
+                    $scope.$apply(function() {
+                        if(hand) {
+                            $scope.data.palmNormal = hand.palmNormal.slice();
+                            $scope.data.palmPosition = hand.stabilizedPalmPosition.slice();
+                        } else {
+                            $scope.data.palmNormal = [0.5, 0.5, 0.5];
+                            $scope.data.palmPosition = [0.5, 0.5, 0.5];
+                        }
+                    });
+                }
+            };
+            Connect(debugFilter, updater);
         });
 
         app.directive('overlay', function() {
