@@ -255,3 +255,16 @@ Normalize.prototype.consume = function(hand) {
     }
     _yield(this, hand);
 }
+
+function PanelUpdater(zoomPanel, regPanel) {
+	var finePanel = document.getElementById(zoomPanel);
+	var coarsePanel = document.getElementById(regPanel);
+	
+	var allObjects = [];
+	var dispObjects = [];
+	//retrieve objects from coarsePanel's svg
+	//determine distance of objects from cursor circle
+	//place objects that fit criteria into dispObjects
+	//use # of objects to determine spacing
+	//place objects around cursor in finePanel in a circle
+}
