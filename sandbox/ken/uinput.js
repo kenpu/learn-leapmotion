@@ -257,14 +257,19 @@ Normalize.prototype.consume = function(hand) {
 }
 
 function PanelUpdater(zoomPanel, regPanel) {
-	var finePanel = document.getElementById(zoomPanel);
-	var coarsePanel = document.getElementById(regPanel);
+	var finePanel = document.getElementById(zoomPanel).innerHTML;
+	var coarsePanel = document.getElementById(regPanel).innerHTML;
 	
-	var allObjects = [];
+	var allObjects = coarsePanel.selectAll('circle');
 	var dispObjects = [];
 	//retrieve objects from coarsePanel's svg
 	//determine distance of objects from cursor circle
+	
 	//place objects that fit criteria into dispObjects
 	//use # of objects to determine spacing
+	var spacing = dispObjects.length;
+	var shiftAngle = 360/spacing;
 	//place objects around cursor in finePanel in a circle
+	for (int i = 0; i < spacing; i++){
+	}
 }
