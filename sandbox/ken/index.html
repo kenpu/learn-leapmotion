@@ -46,7 +46,7 @@
         </table>
 
         <div class="panel">
-        <svg width="400" height="400" <!--id="fineCursor"-->>
+        <svg width="400" height="400">
             <circle ng-attr-cx="{{data.palmNormal[0]*400}}"
                     ng-attr-cy="{{data.palmNormal[2]*400}}" 
                     r="30"></circle>
@@ -54,7 +54,7 @@
         </div>
         
         <div class="panel">
-        <svg width="400" height="400" <!--id="coarseCursor"-->>
+        <svg width="400" height="400">
             <circle ng-attr-cx="{{data.palmPosition[0]*400}}"
                     ng-attr-cy="{{data.palmPosition[1]*400}}" 
                     r="30"></circle>
@@ -67,7 +67,6 @@
         var handFilter = new DomhandFilter(10);
         var normFilter = new Normalize();
         var debugFilter = new DebugFilter("#debug");
-		<!--var panelUpdater = new PanelUpdater("fineCursor","coarseCursor");-->
         Connect(leap, handFilter, normFilter, debugFilter);
 
         app.controller('leapctrl', function($scope) {
