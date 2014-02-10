@@ -308,5 +308,3 @@ Normalize.prototype.consume = function(hand) {
     }
     _yield(this, hand);
 }
-
-
