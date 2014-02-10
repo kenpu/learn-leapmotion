@@ -5,6 +5,9 @@
 
 /* ===== Streamers ========= */
 
+/**
+ * sending a data downstream of a streamer
+ */
 function _yield(streamer, data) {
     if(streamer.downstream && streamer.downstream.length > 0) {
         streamer.downstream.forEach(function(d) {
@@ -13,18 +16,27 @@ function _yield(streamer, data) {
     }
 }
 
+/**
+ * connects downstream to upstream
+ */
 function _connect(upstream, downstream) {
     if(upstream.downstream == null) {
         upstream.downstream = [];
     }
     upstream.downstream.push(downstream);
 }
+/**
+ * Chain connect a series of streamers
+ */
 function Connect() {
     for(var i=1; i < arguments.length; i++) {
         _connect(arguments[i-1], arguments[i]);
     }
 }
 
+/**
+ * Input: raw Leap frames
+ */
 function HandFilter() {
     this.restPalm = null;
     this.state = 'CLOSED';
@@ -50,42 +62,6 @@ HandFilter.prototype.consume = function(x) {
         }
         this.state = 'CLOSED';
     }
-}
-
-function ScalingAngles() {
-}
-ScalingAngles.prototype.consume = function(ang) {
-    if(ang == null) 
-        _yield(this, null)
-    else {
-        var x = [0, 0, 0];
-        x[0] = Math.min(Math.max(ang[0], -0.5), 0.5);
-        x[1] = Math.min(Math.max(ang[1], -0.5), 0.5);
-        x[2] = Math.min(Math.max(ang[2], -0.5), 0.5);
-        _yield(this, x);
-    }
-}
-
-function Mover(width, height, sensitivity) {
-    this.x = width / 2;
-    this.y = height /2;
-    this.width = width,
-    this.height = height;
-    this.sensitivity = sensitivity;
-}
-Mover.prototype.consume = function(da) {
-    if(da == null) {
-        ;
-    } else {
-        var dx = da[0] * this.sensitivity;
-        var dy = da[2] * this.sensitivity;
-        this.x += dx;
-        this.y += dy;
-        this.x = Math.min(Math.max(this.x, 0), this.width);
-        this.y = Math.min(Math.max(this.y, 0), this.height);
-    }
-    var xy = { x: this.x, y: this.y };
-    _yield(this, xy);
 }
 
 
@@ -126,14 +102,14 @@ function LeapStream() {
  * Output:
  *      Stream<Hand>
  */
-function DomhandFilter(freqThreshold) {
+function DominantHandFilter(freqThreshold) {
     this.counter = {};
     this.c0 = freqThreshold;
     this.domHandId = null;
     this.domHandFreq = 0;
-    this.stablized = false;
+    this.stabilized = false;
 }
-DomhandFilter.prototype.updateCounter = function(hand) {
+DominantHandFilter.prototype.updateCounter = function(hand) {
     var id = hand.id;
     if(this.counter[id] == null) {
         this.counter[id] = 1;
@@ -145,14 +121,14 @@ DomhandFilter.prototype.updateCounter = function(hand) {
         this.domHandFreq = this.counter[id];
     }
 }
-DomhandFilter.prototype.reset = function() {
+DominantHandFilter.prototype.reset = function() {
     this.counter = {};
-    this.stablized = false;
+    this.stabilized = false;
     this.domHandId = null;
     this.domHandFreq = 0;
 }
 
-DomhandFilter.prototype.consume = function(frame) {
+DominantHandFilter.prototype.consume = function(frame) {
     var self = this;
 
     if(frame.hands.length == 0) {
@@ -162,13 +138,13 @@ DomhandFilter.prototype.consume = function(frame) {
     }
 
     // identify the dominant hand
-    if(! self.stablized) {
+    if(! self.stabilized) {
         frame.hands.forEach(function(hand) {
             self.updateCounter(hand);
         });
 
         if(self.domHandFreq > self.c0) {
-            self.stablized = true;
+            self.stabilized = true;
         }
         
         _yield(self, null);
@@ -189,6 +165,57 @@ DomhandFilter.prototype.consume = function(frame) {
     }
 }
 
+function DominantPointerFilter() {
+    var state = 'closed'; // 'open', 'ptr', 'ptr-stable'
+    var domFinger = null, domFreq = 0;
+    var count = {};
+}
+DominantPointerFilter.prototype.consume = function(hand) {
+    var self = this;
+    if(! hand) {
+        this.state = 'closed';
+    } else {
+        var fingers = hand.fingers.length;
+        if(fingers == 0) {
+            this.state = 'closed';
+        } else if(fingers >= 3) {
+            this.state = 'open';
+        } else {
+            this.state = 'ptr';
+        }
+    }
+
+    if(this.state == 'ptr') {
+        this.updateCount(hand.fingers);
+        if(this.domFreq > 10) {
+            this.updateHand(hand);
+        }
+    } else {
+        this.reset();
+    }
+
+    _yield(self, hand);
+}
+DominantPointerFilter.prototype.updateCount = function(fingers) {
+    var self = this;
+    fingers.forEach(function(finger) {
+        self.count[finger.id] = (self.count[finger.id] != null) ? (self.count[finger.id]+1) : 1;
+        if(self.count[finger.id] > self.domFreq) {
+            self.domFinger = finger;
+            self.domFreq = self.count[finger.id];
+        }
+    });
+}
+DominantPointerFilter.prototype.updateHand = function(hand) {
+    hand.pointer = this.domFinger.direction.slice();
+    hand.tip = this.domFinger.stabilizedTipPosition.slice();
+}
+DominantPointerFilter.prototype.reset = function() {
+    this.count = {};
+    this.domFinger = null;
+    this.domFreq = 0;
+}
+
 /**
  * DebugHand
  */
@@ -200,9 +227,11 @@ DebugFilter.prototype.consume = function(hand) {
     if(hand == null) {
         angles = [0, 0, 0];
         pos = [0, 0, 0];
+        ptr = [0, 0, 0];
     } else {
         angles = hand.palmNormal.slice();
         pos    = hand.stabilizedPalmPosition.slice();
+        ptr    = (hand.pointer) ? hand.pointer.slice() : [0,0,0];
     }
     if(this.element) {
         var element = this.element;
@@ -213,6 +242,10 @@ DebugFilter.prototype.consume = function(hand) {
         element.find(".position-x").text(sprintf("%2.2f", pos[0]));
         element.find(".position-y").text(sprintf("%2.2f", pos[1]));
         element.find(".position-z").text(sprintf("%2.2f", pos[2]));
+
+        element.find(".pointer-x").text(sprintf("%2.2f", ptr[0]));
+        element.find(".pointer-y").text(sprintf("%2.2f", ptr[1]));
+        element.find(".pointer-z").text(sprintf("%2.2f", ptr[2]));
     }
 
     _yield(this, hand);
@@ -235,8 +268,12 @@ Normalize.prototype.normalize = function(x, xmin, xmax, ymin, ymax) {
     var y = ymin + (x - xmin)/(xmax-xmin) * (ymax - ymin);
     return y;
 }
+
 Normalize.prototype.consume = function(hand) {
     if(hand) {
+        //
+        // normalize palm normal vector to [0 1]
+        //
         var a0 = hand.palmNormal[0];
         var a1 = hand.palmNormal[1];
         var a2 = hand.palmNormal[2];
@@ -245,6 +282,9 @@ Normalize.prototype.consume = function(hand) {
         a2 = this.normalize(a2, -0.7, 0.7, 0, 1.0);
         hand.palmNormal = [a0, a1, a2];
 
+        //
+        // normalize palm position to [0 1]
+        //
         var p0 = hand.stabilizedPalmPosition[0];
         var p1 = hand.stabilizedPalmPosition[1];
         var p2 = hand.stabilizedPalmPosition[2];
@@ -252,6 +292,21 @@ Normalize.prototype.consume = function(hand) {
         p1 = this.normalize(p1, 50, 300, 1.0, 0);
         p2 = this.normalize(p2, -150, 150, 0, 1.0);
         hand.stabilizedPalmPosition = [p0, p1, p2];
+
+        //
+        // normalize pointer vector to [0 1]
+        //
+        if(hand.pointer) {
+            var a0 = hand.pointer[0];
+            var a1 = hand.pointer[1];
+            var a2 = hand.pointer[2];
+            a0 = this.normalize(a0, -1, 1, 0, 1.0);
+            a1 = this.normalize(a1, -1, 1, 0, 1.0);
+            a2 = this.normalize(a2, -0.7, 0.7, 0, 1.0);
+            hand.pointer = [a0, a1, a2];
+        }
     }
     _yield(this, hand);
 }
+
+

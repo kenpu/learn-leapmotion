@@ -43,8 +43,13 @@
                 <td><span class="position-y"></span></td>
                 <td><span class="position-z"></span></td>
             </tr>
+            <tr>
+                <th>Pointer</th>
+                <td><span class="pointer-x"></span></td>
+                <td><span class="pointer-y"></span></td>
+                <td><span class="pointer-z"></span></td>
+            </tr>
         </table>
-
         <div class="panel">
         <svg width="400" height="400">
             <circle ng-attr-cx="{{data.palmNormal[0]*400}}"
@@ -61,18 +66,28 @@
         </svg>
         </div>
 
+        <div class="panel">
+        <svg width="400" height="400">
+            <circle ng-attr-cx="{{data.pointer[0]*400}}"
+                    ng-attr-cy="{{data.pointer[1]*400}}"
+                    r="30"></circle>
+        </svg>
+        </div>
+
     <script>
         var app = angular.module('leapapp', []);
         var leap = new LeapStream();
-        var handFilter = new DomhandFilter(10);
+        var handFilter = new DominantHandFilter(10);
+        var pointerFilter = new DominantPointerFilter();
         var normFilter = new Normalize();
         var debugFilter = new DebugFilter("#debug");
-        Connect(leap, handFilter, normFilter, debugFilter);
+        Connect(leap, handFilter, pointerFilter, normFilter, debugFilter);
 
         app.controller('leapctrl', function($scope) {
             $scope.data = {
                 palmNormal: null,
-                palmPosition: null
+                palmPosition: null,
+                pointer: null
             };
 
             var updater = {
@@ -81,9 +96,17 @@
                         if(hand) {
                             $scope.data.palmNormal = hand.palmNormal.slice();
                             $scope.data.palmPosition = hand.stabilizedPalmPosition.slice();
+                            if(hand.pointer) {
+                                $scope.data.pointer = hand.pointer.slice();
+                                $scope.data.tip     = hand.tip.slice();
+                            } else {
+                                $scope.data.pointer = [1/2,1/2,1/2];
+                                $scope.data.tip = [1/2,1/2,1/2];
+                            }
                         } else {
                             $scope.data.palmNormal = [0.5, 0.5, 0.5];
                             $scope.data.palmPosition = [0.5, 0.5, 0.5];
+                            $scope.data.pointer = [1/2, 1/2, 1/2];
                         }
                     });
                 }
