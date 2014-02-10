@@ -256,7 +256,7 @@ Normalize.prototype.consume = function(hand) {
     _yield(this, hand);
 }
 
-function PanelUpdater(zoomPanel, regPanel) {
+/*function PanelUpdater(zoomPanel, regPanel) {
 	var finePanel = document.getElementById(zoomPanel).innerHTML;
 	var coarsePanel = document.getElementById(regPanel).innerHTML;
 	
@@ -271,5 +271,5 @@ function PanelUpdater(zoomPanel, regPanel) {
 	var shiftAngle = 360/spacing;
 	//place objects around cursor in finePanel in a circle
 	for (int i = 0; i < spacing; i++){
-	}
+	}*/
 }
