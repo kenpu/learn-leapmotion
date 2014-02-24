@@ -248,6 +248,7 @@ DebugFilter.prototype.consume = function(hand) {
         element.find(".pointer-z").text(sprintf("%2.2f", ptr[2]));
     }
 
+    // console.debug("DEBUG", hand)
     _yield(this, hand);
 }
 
@@ -307,4 +308,35 @@ Normalize.prototype.consume = function(hand) {
         }
     }
     _yield(this, hand);
+}
+
+function ArchiveFilter(exp) {
+    this.exp = exp || "experiment_1";
+    this.data = [];
+}
+ArchiveFilter.prototype.consume = function(hand) {
+    if(hand) {
+        this.data.push(this.serialize(hand));
+    } else {
+        if(this.data.length > 0) {
+            this.save();
+            this.data.length = 0;
+        }
+    }
+    _yield(this, hand);
+}
+
+ArchiveFilter.prototype.serialize = function(hand) {
+    var data = {};
+    if(hand.palmNormal) data.palmNormal = hand.palmNormal.slice();
+    if(hand.stabilizedPalmPosition) data.stabilizedPalmPosition = hand.stabilizedPalmPosition.slice();
+    if(hand.pointer) data.pointer = hand.pointer.slice();
+    if(hand.frame && hand.frame.timestamp) data.timestamp = hand.frame.timestamp;
+
+    return data;
+}
+ArchiveFilter.prototype.save = function() {
+    console.debug("Saving back to server observations:", this.data.length);
+    var data = JSON.stringify(this.data);
+    $.post("/save/" + this.exp, {data: data});
 }

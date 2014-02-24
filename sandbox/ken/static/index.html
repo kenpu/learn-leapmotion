@@ -80,8 +80,9 @@
         var handFilter = new DominantHandFilter(10);
         var pointerFilter = new DominantPointerFilter();
         var normFilter = new Normalize();
+        var archive = new ArchiveFilter("test1");
         var debugFilter = new DebugFilter("#debug");
-        Connect(leap, handFilter, pointerFilter, normFilter, debugFilter);
+        Connect(leap, handFilter, pointerFilter, normFilter, archive, debugFilter);
 
         app.controller('leapctrl', function($scope) {
             $scope.data = {
