@@ -24,7 +24,7 @@
     </head>
     <body>
         <div class="hide-container">
-            <div>7</div>
+            <div></div>
         </div>
         <script>
         var W = $(window).width(), H = $(window).height();
@@ -82,7 +82,7 @@
             .attr('cy', function(d) { return d.y; })
             .attr('r', function(d) { return d.size; })
             .attr('fill', 
-                function(d, i) { return i ? color(i) : 'rgba(0,0,0,0)'; })
+                function(d, i) { return i ? color(i) : 'rgba(1,1,1,1)'; })
             .call(force.drag)
             ;
 
