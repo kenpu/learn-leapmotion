@@ -311,7 +311,7 @@ Normalize.prototype.consume = function(hand) {
 }
 
 function ArchiveFilter(exp) {
-    this.exp = exp || "experiment_1";
+    this.exp = exp || "blank";
     this.data = [];
 }
 ArchiveFilter.prototype.consume = function(hand) {
