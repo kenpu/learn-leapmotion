@@ -52,24 +52,24 @@
         </table>
         <div class="panel">
         <svg width="400" height="400">
-            <circle ng-attr-cx="{{data.palmNormal[0]*400}}"
-                    ng-attr-cy="{{data.palmNormal[2]*400}}" 
+            <circle ng-attr-cx="{{data.palm[X]*400}}"
+                    ng-attr-cy="{{data.palm[Z]*400}}" 
                     r="30"></circle>
         </svg>
         </div>
         
         <div class="panel">
         <svg width="400" height="400">
-            <circle ng-attr-cx="{{data.palmPosition[0]*400}}"
-                    ng-attr-cy="{{data.palmPosition[1]*400}}" 
+            <circle ng-attr-cx="{{data.pos[X]*400}}"
+                    ng-attr-cy="{{data.pos[Y]*400}}" 
                     r="30"></circle>
         </svg>
         </div>
 
         <div class="panel">
         <svg width="400" height="400">
-            <circle ng-attr-cx="{{data.pointer[0]*400}}"
-                    ng-attr-cy="{{data.pointer[1]*400}}"
+            <circle ng-attr-cx="{{data.ptr[X]*400}}"
+                    ng-attr-cy="{{data.ptr[Y]*400}}"
                     r="30"></circle>
         </svg>
         </div>
@@ -77,42 +77,17 @@
     <script>
         var app = angular.module('leapapp', []);
         var leap = new LeapStream();
-        var handFilter = new DominantHandFilter(10);
-        var pointerFilter = new DominantPointerFilter();
+        var handFilter = new DominantHandFilter(true, 10);
+        var pointerFilter = new DominantPointerFilter(true, 10);
         var normFilter = new Normalize();
         var archive = new ArchiveFilter("experiment_index_here");
         var debugFilter = new DebugFilter("#debug");
         Connect(leap, handFilter, pointerFilter, normFilter, archive, debugFilter);
 
         app.controller('leapctrl', function($scope) {
-            $scope.data = {
-                palmNormal: null,
-                palmPosition: null,
-                pointer: null
-            };
-
-            var updater = {
-                consume: function(hand) {
-                    $scope.$apply(function() {
-                        if(hand) {
-                            $scope.data.palmNormal = hand.palmNormal.slice();
-                            $scope.data.palmPosition = hand.stabilizedPalmPosition.slice();
-                            if(hand.pointer) {
-                                $scope.data.pointer = hand.pointer.slice();
-                                $scope.data.tip     = hand.tip.slice();
-                            } else {
-                                $scope.data.pointer = [1/2,1/2,1/2];
-                                $scope.data.tip = [1/2,1/2,1/2];
-                            }
-                        } else {
-                            $scope.data.palmNormal = [0.5, 0.5, 0.5];
-                            $scope.data.palmPosition = [0.5, 0.5, 0.5];
-                            $scope.data.pointer = [1/2, 1/2, 1/2];
-                        }
-                    });
-                }
-            };
-            Connect(debugFilter, updater);
+            $scope.data = {};
+            var update = new ScopeUpdate($scope, 'data');
+            Connect(debugFilter, update);
         });
 
         app.directive('overlay', function() {

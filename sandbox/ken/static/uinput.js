@@ -34,50 +34,6 @@ function Connect() {
     }
 }
 
-/**
- * Input: raw Leap frames
- */
-function HandFilter() {
-    this.restPalm = null;
-    this.state = 'CLOSED';
-}
-HandFilter.prototype.consume = function(x) {
-    console.debug("handFilter:", this.state);
-    if(x.hand && x.hand.fingers.length >= 2) {
-        // transition
-        if(this.state == 'CLOSED') {
-            this.restPalm = x.palm.slice();
-        }
-        this.state = 'OPEN';
-        // compute deltas
-        var y = [x.palm[0] - this.restPalm[0],
-                 x.palm[1] - this.restPalm[1],
-                 x.palm[2] - this.restPalm[2]];
-        _yield(this, y);
-    } else {
-        // transition
-        if(this.state == 'OPEN') {
-            this.restPalm = null;
-            _yield(this, null);
-        }
-        this.state = 'CLOSED';
-    }
-}
-
-
-/* ===== NgScope =========== */
-
-function NgScope($scope, key) {
-    this.$scope = $scope;
-    this.key = key;
-}
-NgScope.prototype.consume = function(x) {
-    console.debug("ngscope", this.key, x);
-    var self = this;
-    self.$scope.$apply(function() {
-        self.$scope[self.key] = x;
-    });
-}
 
 /* ===== Leap stream ======= */
 
@@ -102,11 +58,12 @@ function LeapStream() {
  * Output:
  *      Stream<Hand>
  */
-function DominantHandFilter(freqThreshold) {
+function DominantHandFilter(enabled, freqThreshold) {
     this.counter = {};
     this.c0 = freqThreshold;
     this.domHandId = null;
     this.domHandFreq = 0;
+    this.enabled = enabled;
     this.stabilized = false;
 }
 DominantHandFilter.prototype.updateCounter = function(hand) {
@@ -134,7 +91,13 @@ DominantHandFilter.prototype.consume = function(frame) {
     if(frame.hands.length == 0) {
         self.reset();
         _yield(self, null);
-        return
+        return;
+    }
+
+    if(! this.enabled) {
+        console.debug("hand filter disabled");
+        _yield(self, frame.hands[0]);
+        return;
     }
 
     // identify the dominant hand
@@ -165,13 +128,17 @@ DominantHandFilter.prototype.consume = function(frame) {
     }
 }
 
-function DominantPointerFilter() {
-    var state = 'closed'; // 'open', 'ptr', 'ptr-stable'
-    var domFinger = null, domFreq = 0;
-    var count = {};
+function DominantPointerFilter(enabled, threshold) {
+    this.state = 'closed'; // 'open', 'ptr', 'ptr-stable'
+    this.domFinger = null;
+    this.domFreq = 0;
+    this.count = {};
+    this.enabled = enabled;
+    this.freqThreshold = threshold;
 }
 DominantPointerFilter.prototype.consume = function(hand) {
     var self = this;
+
     if(! hand) {
         this.state = 'closed';
     } else {
@@ -186,16 +153,25 @@ DominantPointerFilter.prototype.consume = function(hand) {
     }
 
     if(this.state == 'ptr') {
-        this.updateCount(hand.fingers);
-        if(this.domFreq > 10) {
-            this.updateHand(hand);
+        var domFinger;
+        // figure out the dominant pointing finger
+        if(this.enabled) {
+            this.updateCount(hand.fingers);
+            if(this.domFreq > this.freqThreshold) {
+                domFinger = this.domFinger;
+            }
+        } else {
+            domFinger = hand.fingers[0];
         }
+        // sets the tip and pointer fields
+        this.updateHand(hand, domFinger);
     } else {
         this.reset();
     }
 
     _yield(self, hand);
 }
+
 DominantPointerFilter.prototype.updateCount = function(fingers) {
     var self = this;
     fingers.forEach(function(finger) {
@@ -206,9 +182,14 @@ DominantPointerFilter.prototype.updateCount = function(fingers) {
         }
     });
 }
-DominantPointerFilter.prototype.updateHand = function(hand) {
-    hand.pointer = this.domFinger.direction.slice();
-    hand.tip = this.domFinger.stabilizedTipPosition.slice();
+DominantPointerFilter.prototype.updateHand = function(hand, f) {
+    if(f) {
+        hand.pointer = f.direction.slice();
+        hand.tip = f.stabilizedTipPosition.slice();
+    } else {
+        hand.pointer = null;
+        hand.tip = null;
+    }
 }
 DominantPointerFilter.prototype.reset = function() {
     this.count = {};
@@ -339,4 +320,43 @@ ArchiveFilter.prototype.save = function() {
     console.debug("Saving back to server observations:", this.data.length);
     var data = JSON.stringify(this.data);
     $.post("/save/" + this.exp, {data: data});
+}
+
+/**
+ * Update the scope with leap motion 3D data
+ */
+function ScopeUpdate($scope, dataField, defaults) {
+    this.scope = $scope;
+    this.field = dataField;
+    this.defaults = defaults || {};
+    var noop = function() { return null; }
+    if(! this.defaults.ptr) this.defaults.ptr = noop;
+    if(! this.defaults.tip) this.defaults.tip = noop;
+    if(! this.defaults.palm) this.defaults.palm = noop;
+    if(! this.defaults.pos) this.defaults.pos = noop;
+
+    $scope.X = 0, $scope.Y = 1; $scope.Z = 2;
+}
+ScopeUpdate.prototype.consume = function(hand) {
+    var self = this;
+    self.scope.$apply(function() {
+        var data = self.scope[self.field];
+        if(hand) {
+            data.palm = hand.palmNormal.slice();
+            data.pos  = hand.stabilizedPalmPosition.slice();
+            if(hand.pointer) {
+                data.ptr  = hand.pointer.slice();
+                data.tip  = hand.tip.slice();
+            } else {
+                data.ptr  = self.defaults.ptr(hand);
+                data.tip  = self.defaults.tip(hand);
+            }
+        } else {
+            data.palm = self.defaults.palm(hand);
+            data.pos  = self.defaults.pos(hand);
+            data.ptr  = self.defaults.ptr(hand);
+            data.tip  = self.defaults.tip(hand);
+        }
+    });
+    _yield(this, hand);
 }

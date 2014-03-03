@@ -36,7 +36,7 @@ app.filter('angles', function() {
 app.controller('twocursorCtrl', function($scope, $window, leap) {
 	$scope.pointers = {
 		p1: [0, 0, 0],
-		p2: [0, 0, 0]
+		p2: [0, 0, 0],
 	};
 
 	var n = 0;
@@ -134,4 +134,15 @@ function clearFrame(frame) {
 
 function subtract(v1, v2) {
 	return [v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2]]
+}
+
+function Position(x0, y0) {
+    this.x = x0;
+    this.y = y0;
+}
+Position.prototype.dx = function (dx){
+    this.x += dx;
+}
+Position.prototype.dy = function (dy){
+    this.y += dy;
 }

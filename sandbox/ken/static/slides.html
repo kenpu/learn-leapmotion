@@ -1,0 +1,84 @@
+<!doctype html>
+
+<html ng-app="leapapp">
+    <head>
+    <script src="jquery.min.js"></script>
+    <script src="angular.min.js"></script>
+    <script src="sprintf.js"></script>
+    <script src="leap.js"></script>
+    <script src="uinput.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        div.slide {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            display: none;
+        }
+        div.slide.active {
+            display: block;
+        }
+        .slide img {
+            height: 100%;
+            display: inline-block;
+        }
+    </style>
+    </head>
+
+    <body ng-controller="leapctrl"> 
+
+        <slide directory="/static/slides">
+            <div class="slide" ng-repeat="i in slides()" 
+                 ng-class="{active: active(i)}">
+                <img ng-src="{{slideUrl(i)}}"></img>
+            </div>
+        </slide>
+
+        <cursor></cursor>
+
+    <script>
+        var app = angular.module('leapapp', []);
+        var leap = new LeapStream();
+        var handFilter = new DominantHandFilter(true, 10);
+        var pointerFilter = new DominantPointerFilter(true, 10);
+        var normFilter = new Normalize();
+        Connect(leap, handFilter, pointerFilter, normFilter);
+
+        app.directive('slide', function() {
+            return {
+                restrict: 'E',
+                link: function(scope, element, attrs) {
+                    scope.directory = attrs.directory;
+                }
+            }
+        });
+
+        app.controller('leapctrl', function($scope) {
+            $scope.data = {};
+            $scope.current = 1;
+
+            var update = new ScopeUpdate($scope, 'data');
+            Connect(normFilter, update);
+
+            $scope.slideUrl = function(i) {
+                return sprintf("%s/slide_%d.png", $scope.directory, i);
+            };
+
+            $scope.slides = function() {
+                var x = [];
+                for(var i=1; i <= 16; i++) x.push(i);
+                return x;
+            }
+
+            $scope.active = function(i) {
+                return i == $scope.current;
+            }
+
+            window.$scope = $scope;
+        });
+    </script>
+    </body>
+</html>
