@@ -342,6 +342,7 @@ ScopeUpdate.prototype.consume = function(hand) {
     self.scope.$apply(function() {
         var data = self.scope[self.field];
         if(hand) {
+            data.fcount = hand.fingers.length;
             data.palm = hand.palmNormal.slice();
             data.pos  = hand.stabilizedPalmPosition.slice();
             if(hand.pointer) {
@@ -357,6 +358,27 @@ ScopeUpdate.prototype.consume = function(hand) {
             data.ptr  = self.defaults.ptr(hand);
             data.tip  = self.defaults.tip(hand);
         }
+        // console.debug("scope.data =", data)
     });
     _yield(this, hand);
+}
+
+/**
+ * Recognizes ultra simple gestures of page turning
+ */
+function GestureRecognizer($scope) {
+    this.scope = $scope;
+}
+GestureRecognizer.prototype.consume = function(hand) {
+    var gesture = {};
+    if(hand && hand.fingers.length == 0) {
+        if(hand.stabilizedPalmPosition[2] > 0.95) {
+            this.scope.$apply(function() {
+                this.scope.NextSlide();
+            });
+        }
+        else if(hand.stabilizedPalmPosition[2] < 0.05) {
+            
+        }
+    }
 }
