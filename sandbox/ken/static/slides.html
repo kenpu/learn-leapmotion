@@ -34,6 +34,22 @@
             height: 100%;
             z-index: 100;
         }
+
+        [cursor] > div {
+            font-family: "sans serif";
+            font-size: 40px;
+            font-weight: bold;
+        }
+        [cursor] .left {
+            position: fixed;
+            top: 50%;
+            left: 0;
+        }
+        [cursor] .right {
+            position: fixed;
+            top: 50%;
+            right: 0;
+        }
     </style>
     </head>
 
@@ -47,9 +63,24 @@
         </slide>
 
         <div cursor>
-            <svg ng-attr-width="{{width}}" ng-attr-height="{{height}}">
-                <circle ng-attr-cx="{{width * data.pos[X]}}" ng-attr-cy="{{height * data.pos[Y]}}" r="{{cursorSize()}}" fill="#888" opacity="0.5"></circle>
+            <svg ng-show="InMiddle()"
+                ng-attr-width="{{width}}" ng-attr-height="{{height}}">
+                <circle ng-attr-cx="{{width * data.pos[X]}}" 
+                        ng-attr-cy="{{height * data.pos[Y]}}" 
+                        r="30"
+                        fill="#888" 
+                        opacity="0.3"></circle>
+
+                <circle ng-show="data.highlight"
+                        ng-attr-cx="{{width * data.pos[X]}}" 
+                        ng-attr-cy="{{height * data.pos[Y]}}" 
+                        r="20"
+                        fill="transparent"
+                        stroke="{{data.highlight}}"
+                        stroke-width="5px"></circle>
             </svg>
+            <div ng-show="InLeft()" class="left" >⇖</div>
+            <div ng-show="InRight()" class="right">⇘</div>
         </div>
 
     <script>
@@ -84,7 +115,7 @@
             }
         })
 
-        app.controller('leapctrl', function($scope) {
+        app.controller('leapctrl', function($scope, $window) {
             $scope.current = 1;
 			$scope.inTransition = false;
 
@@ -102,13 +133,29 @@
                 return i == $scope.current;
             }
 
-            $scope.cursorSize = function() {
-                if($scope.data.fcount > 3)
-                    return 50;
-                else
-                    return 30;
+            $scope.InMiddle = function() {
+                if($scope.data.pos) {
+                    return $scope.data.pos[0] < 0.95 && $scope.data.pos[0] > 0.05;
+                } else {
+                    return false;
+                }
             }
-			
+            $scope.InLeft = function() {
+                if($scope.data.pos) {
+                    return $scope.data.pos[0] <= 0.05;
+                } else {
+                    return false;
+                }
+            }
+
+            $scope.InRight = function() {
+                if($scope.data.pos) {
+                    return $scope.data.pos[0] >= 0.95;
+                } else {
+                    return false;
+                }
+            }
+
 			$scope.NextSlide = function() {
 				if($scope.current < 16)
 				{
@@ -129,9 +176,35 @@
 				$scope.data.pos[1] = $scope.height / 2;
 			}
 
+            var PGUP = 33,
+                PGDN = 34;
+            function keydown(e) {
+                if(e.keyCode != PGUP && e.keyCode != PGDN) return true;
+                $scope.$apply(function() {
+                    $scope.data.highlight = (e.keyCode == PGUP) ? "#800" : "#008";
+                });
+            }
+            function keyup(e) {
+                if(e.keyCode != PGUP && e.keyCode != PGDN) return true;
+                $scope.$apply(function() {
+                    $scope.data.highlight = false;
+                });
+
+                if($scope.data.pos[0] > 0.95) {
+                    console.debug("NEXT");
+                    $scope.$apply($scope.NextSlide);
+                } else if($scope.data.pos[0] < 0.05) {
+                    console.debug("PREV");
+                    $scope.$apply($scope.PreviousSlide);
+                }
+            }
+
             $scope.data = {};
             var leap = new ScopeUpdate($scope, 'data');
             Connect(normFilter, leap);
+
+            $window.addEventListener("keydown", keydown, true);
+            $window.addEventListener("keyup", keyup, true);
 
             window.$scope = $scope;
         });
