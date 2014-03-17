@@ -374,11 +374,21 @@ GestureRecognizer.prototype.consume = function(hand) {
     if(hand && hand.fingers.length == 0) {
         if(hand.stabilizedPalmPosition[2] > 0.95) {
             this.scope.$apply(function() {
-                this.scope.NextSlide();
+				if(!$scope.inTransition)
+				{
+					this.scope.NextSlide();
+					$scope.inTransition = true;
+				}
             });
         }
         else if(hand.stabilizedPalmPosition[2] < 0.05) {
-            
+            this.scope.$apply(function() {
+				if(!$scope.inTransition)
+				{
+					this.scope.PreviousSlide();
+					$scope.inTransition = false;
+				}
+            });
         }
     }
 }
